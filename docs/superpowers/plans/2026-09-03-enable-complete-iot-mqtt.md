@@ -179,12 +179,13 @@ Keep every other protocol entry `enabled: false`.
 $serverYaml = Get-Content -LiteralPath 'yudao-server/src/main/resources/application-local.yaml' -Raw
 $gatewayYaml = Get-Content -LiteralPath 'yudao-module-iot/yudao-module-iot-gateway/src/main/resources/application.yaml' -Raw
 if ($serverYaml -notmatch 'jdbc:TAOS-WS://\$\{TDENGINE_HOST:117\.88\.101\.77\}') { throw 'TDengine URL missing' }
-if ($serverYaml -match '(?m)^\s+password:\s*(?!\$\{TDENGINE_PASSWORD\}\s*$)\S+') { throw 'TDengine password must remain an environment placeholder' }
+if ($serverYaml -notmatch '(?m)^\s{10}password:\s*\$\{TDENGINE_PASSWORD\}\s*$') { throw 'TDengine password must remain an environment placeholder' }
 if ($gatewayYaml -notmatch '(?s)id:\s*mqtt-json.*?enabled:\s*true.*?port:\s*\$\{IOT_MQTT_PORT:8883\}.*?ssl:\s*true') { throw 'TLS MQTT configuration missing' }
 $disabledProtocolIds = 'http-json','tcp-json','udp-json','websocket-json','coap-json','emqx-1','modbus-tcp-client-1','modbus-tcp-server-1'
 foreach ($id in $disabledProtocolIds) {
-    $pattern = '(?ms)^\s+- id:\s*' + [regex]::Escape($id) + '\s*$\r?\n\s+enabled:\s*false\s*$'
-    if ($gatewayYaml -notmatch $pattern) { throw "Protocol $id must remain disabled" }
+    $blockPattern = '(?ms)^[ ]{8}- id:[ ]*' + [regex]::Escape($id) + '[ ]*$.*?(?=^[ ]{8}- id:|\z)'
+    $block = [regex]::Match($gatewayYaml, $blockPattern).Value
+    if ($block -notmatch '(?m)^[ ]{10}enabled:[ ]*false[ ]*$') { throw "Protocol $id must remain disabled" }
 }
 ```
 
