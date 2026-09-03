@@ -244,8 +244,8 @@ $serverJar = 'yudao-server/target/yudao-server.jar'
 $gatewayJar = 'yudao-module-iot/yudao-module-iot-gateway/target/yudao-module-iot-gateway.jar'
 if (-not (Test-Path -LiteralPath $serverJar)) { throw 'Server JAR missing' }
 if (-not (Test-Path -LiteralPath $gatewayJar)) { throw 'Gateway JAR missing' }
-jar tf $serverJar | Select-String 'cn/iocoder/yudao/module/iot/' | Select-Object -First 1
-jar tf $gatewayJar | Select-String 'IotGatewayServerApplication.class'
+jar tf $serverJar | Select-String 'BOOT-INF/lib/yudao-module-iot-biz-.*\.jar' | Select-Object -First 1
+jar tf $gatewayJar | Select-String 'BOOT-INF/classes/cn/iocoder/yudao/module/iot/gateway/IotGatewayServerApplication.class'
 ```
 
 Expected: both searches return a matching class.
