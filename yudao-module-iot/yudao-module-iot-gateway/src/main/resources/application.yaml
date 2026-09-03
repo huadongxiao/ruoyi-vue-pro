@@ -6,10 +6,10 @@ spring:
 
   # Redis 配置
   redis:
-    host: 127.0.0.1 # Redis 服务器地址
-    port: 6379 # Redis 服务器端口
-    database: 0 # Redis 数据库索引
-    # password: # Redis 密码，如果有的话
+    host: ${REDIS_HOST:127.0.0.1} # Redis 服务器地址
+    port: ${REDIS_PORT:6379} # Redis 服务器端口
+    database: ${REDIS_DATABASE:0} # Redis 数据库索引
+    password: ${REDIS_PASSWORD:} # Redis 密码，如果有的话
     timeout: 30000ms # 连接超时时间
   # Kafka 配置项，对应 KafkaProperties 配置类
   kafka:
@@ -36,7 +36,7 @@ yudao:
     gateway:
       # 设备 RPC 配置
       rpc:
-        url: http://127.0.0.1:48080 # 主程序 API 地址
+        url: ${IOT_SERVER_URL:http://127.0.0.1:48080} # 主程序 API 地址
         connect-timeout: 30s
         read-timeout: 30s
       # 设备 Token 配置
@@ -115,10 +115,14 @@ yudao:
         # 针对引入的 MQTT 组件的配置
         # ====================================
         - id: mqtt-json
-          enabled: false
+          enabled: true
           protocol: mqtt
-          port: 1883
+          port: ${IOT_MQTT_PORT:8883}
           serialize: json
+          ssl:
+            ssl: true
+            ssl-cert-path: ${IOT_MQTT_CERT_PATH:/app/certs/fullchain.pem}
+            ssl-key-path: ${IOT_MQTT_KEY_PATH:/app/certs/privkey.pem}
           mqtt:
             max-message-size: 8192           # 最大消息大小（字节）
             connect-timeout-seconds: 60      # 连接超时时间（秒）
