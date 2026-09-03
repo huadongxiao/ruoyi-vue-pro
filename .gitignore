@@ -54,3 +54,4 @@ application-my.yaml
 .DS_Store
 **/.DS_Store
 outputs/
+.worktrees/
