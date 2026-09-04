@@ -1,6 +1,7 @@
 package cn.iocoder.yudao.module.iot.service.device.message;
 
 import cn.hutool.core.date.LocalDateTimeUtil;
+import cn.hutool.extra.spring.SpringUtil;
 import cn.iocoder.yudao.framework.common.exception.ServiceException;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.test.core.ut.BaseMockitoUnitTest;
@@ -19,6 +20,8 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
+import org.springframework.aop.framework.ProxyFactory;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -35,8 +38,7 @@ import static org.mockito.Mockito.*;
  * {@link IotDeviceMessageServiceImpl} 的单元测试
  *
  * 注：TDengine 数据源没有 embedded 替代，mapper 与依赖 service 走 mock；
- * handleUpstreamDeviceMessage 与 sendDeviceMessage 下行成功路径依赖 SpringUtil.getBean 的自调用
- * createDeviceLogAsync，更适合放到集成测试，本类不展开。
+ * handleUpstreamDeviceMessage 与 sendDeviceMessage 下行成功路径依赖 SpringUtil.getBean 的自调用。
  *
  * @author 芋道源码
  */
@@ -111,6 +113,25 @@ public class IotDeviceMessageServiceImplTest extends BaseMockitoUnitTest {
 
         // 调用 & 断言
         assertDoesNotThrow(() -> service.createDeviceLogAsync(message));
+        verify(deviceMessageMapper).insert(any(IotDeviceMessageDO.class));
+    }
+
+    @Test
+    public void testHandleUpstreamDeviceMessage_withJdkProxySelfLookup() {
+        // 准备：生产环境可能使用 JDK 动态代理，此时代理只能按接口类型获取
+        ProxyFactory proxyFactory = new ProxyFactory();
+        proxyFactory.setTarget(service);
+        proxyFactory.setInterfaces(IotDeviceMessageService.class);
+        IotDeviceMessageService proxy = (IotDeviceMessageService) proxyFactory.getProxy();
+        IotDeviceMessage message = buildMessage(IotDeviceMessageMethodEnum.PROPERTY_POST.getMethod());
+        IotDeviceDO device = buildDevice();
+
+        try (MockedStatic<SpringUtil> springUtil = mockStatic(SpringUtil.class)) {
+            springUtil.when(() -> SpringUtil.getBean(IotDeviceMessageService.class)).thenReturn(proxy);
+
+            // 调用：JDK 代理场景下也应完成消息日志写入，不应因找不到实现类 Bean 而中断
+            assertDoesNotThrow(() -> service.handleUpstreamDeviceMessage(message, device));
+        }
         verify(deviceMessageMapper).insert(any(IotDeviceMessageDO.class));
     }
 

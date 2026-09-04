@@ -28,6 +28,13 @@ public interface IotDeviceMessageService {
     void defineDeviceMessageStable();
 
     /**
+     * 异步记录设备消息日志
+     *
+     * @param message 设备消息
+     */
+    void createDeviceLogAsync(IotDeviceMessage message);
+
+    /**
      * 发送设备消息
      *
      * @param message 消息（“codec（编解码）字段” 部分字段）

@@ -84,7 +84,8 @@ public class IotDeviceMessageServiceImpl implements IotDeviceMessageService {
     }
 
     @Async
-    void createDeviceLogAsync(IotDeviceMessage message) {
+    @Override
+    public void createDeviceLogAsync(IotDeviceMessage message) {
         IotDeviceMessageDO messageDO = BeanUtils.toBean(message, IotDeviceMessageDO.class)
                 .setUpstream(IotDeviceMessageUtils.isUpstreamMessage(message))
                 .setReply(IotDeviceMessageUtils.isReplyMessage(message))
@@ -384,8 +385,8 @@ public class IotDeviceMessageServiceImpl implements IotDeviceMessageService {
         });
     }
 
-    private IotDeviceMessageServiceImpl getSelf() {
-        return SpringUtil.getBean(getClass());
+    private IotDeviceMessageService getSelf() {
+        return SpringUtil.getBean(IotDeviceMessageService.class);
     }
 
 }
