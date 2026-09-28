@@ -23,7 +23,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 
 import javax.annotation.Resource;
-import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 
 import static cn.iocoder.yudao.framework.common.util.date.LocalDateTimeUtils.buildBetweenTime;
@@ -33,6 +33,7 @@ import static cn.iocoder.yudao.framework.test.core.util.AssertUtils.assertPojoEq
 import static cn.iocoder.yudao.framework.test.core.util.RandomUtils.randomPojo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -102,10 +103,35 @@ public class BrokerageRecordServiceImplTest extends BaseDbUnitTest {
     // ==================== calculatePrice：相加语义 ====================
 
     @Test
-    public void testCalculatePrice_additive() {
-        // 基数 1000 分：比例 10% => 100 分；固定 88 分 × 2 件 => 176 分；合计 276
-        int brokerage = brokerageRecordService.calculatePrice(1000, new BigDecimal("10"), 88, 2);
-        assertEquals(276, brokerage);
+    public void testAddBrokerage_usesOrderBrokerageUser() {
+        TradeConfigDO tradeConfig = new TradeConfigDO();
+        tradeConfig.setBrokerageEnabled(true);
+        tradeConfig.setBrokerageFirstPercent(10);
+        when(tradeConfigService.getTradeConfig()).thenReturn(tradeConfig);
+        BrokerageUserDO orderBrokerageUser = new BrokerageUserDO().setId(200L).setBrokerageEnabled(true)
+                .setBrokeragePrice(0);
+        when(brokerageUserService.getBrokerageUser(200L)).thenReturn(orderBrokerageUser);
+
+        brokerageRecordService.addBrokerage(100L, 200L, BrokerageRecordBizTypeEnum.ORDER,
+                ListUtil.of(new BrokerageAddReqBO("1", 1000, null, null, 100L, "订单商品")));
+
+        List<BrokerageRecordDO> records = brokerageRecordMapper.selectList(null);
+        assertEquals(1, records.size());
+        assertEquals(200L, records.get(0).getUserId());
+        assertEquals(100, records.get(0).getPrice());
+        verify(brokerageUserService).updateUserPrice(200L, 100);
+    }
+
+    @Test
+    public void testCalculatePrice_useFixedPrice() {
+        // mock 数据
+        Integer payPrice = 1000;
+        Integer percent = 10;
+        Integer fixedPrice = 88;
+        // 调用
+        int brokerage = brokerageRecordService.calculatePrice(payPrice, percent, fixedPrice);
+        // 断言
+        assertEquals(fixedPrice, brokerage);
     }
 
     @Test

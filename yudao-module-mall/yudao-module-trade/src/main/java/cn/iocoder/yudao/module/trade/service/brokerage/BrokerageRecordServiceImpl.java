@@ -76,11 +76,13 @@ public class BrokerageRecordServiceImpl implements BrokerageRecordService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void addBrokerage(Long userId, BrokerageRecordBizTypeEnum bizType, List<BrokerageAddReqBO> list) {
-        TradeConfigDO tradeConfig = tradeConfigService.getTradeConfig();
+    public void addBrokerage(Long userId, Long brokerageUserId, BrokerageRecordBizTypeEnum bizType,
+                             List<BrokerageAddReqBO> list) {
+        TradeConfigDO memberConfig = tradeConfigService.getTradeConfig();
         // 0 未启用分销功能
-        if (tradeConfig == null || !BooleanUtil.isTrue(tradeConfig.getBrokerageEnabled())) {
-            log.error("[addBrokerage][增加佣金失败：brokerageEnabled 未配置，userId({}) bizType({}) list({})", userId, bizType, list);
+        if (memberConfig == null || !BooleanUtil.isTrue(memberConfig.getBrokerageEnabled())) {
+            log.error("[addBrokerage][增加佣金失败：brokerageEnabled 未配置，userId({}) brokerageUserId({}) bizType({}) list({})",
+                    userId, brokerageUserId, bizType, list);
             return;
         }
         // 0.1 校验层级规则已配置
@@ -90,16 +92,10 @@ public class BrokerageRecordServiceImpl implements BrokerageRecordService {
             return;
         }
 
-        // 逐级向上分佣。注意：上级无分销资格时跳过该人，但层号不压缩
-        BrokerageUserDO upline = brokerageUserService.getBindBrokerageUser(userId);
-        for (int level = 1; upline != null && level <= globalRules.size(); level++) {
-            if (BooleanUtil.isTrue(upline.getBrokerageEnabled())) {
-                addBrokerage(upline, list, tradeConfig.getBrokerageFrozenDays(), globalRules, bizType, level);
-            }
-            // 继续往上找一级
-            upline = upline.getBindUserId() != null
-                    ? brokerageUserService.getBrokerageUser(upline.getBindUserId())
-                    : null;
+        // 1.1 获得一级推广人
+        BrokerageUserDO firstUser = brokerageUserService.getBrokerageUser(brokerageUserId);
+        if (firstUser == null || !BooleanUtil.isTrue(firstUser.getBrokerageEnabled())) {
+            return;
         }
     }
 
