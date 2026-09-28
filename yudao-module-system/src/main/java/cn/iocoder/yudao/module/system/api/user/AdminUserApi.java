@@ -106,4 +106,12 @@ public interface AdminUserApi {
      */
     void validateUserList(Collection<Long> ids);
 
+    /**
+     * 更新用户状态
+     *
+     * @param id     用户编号
+     * @param status 状态
+     */
+    void updateUserStatus(Long id, Integer status);
+
 }

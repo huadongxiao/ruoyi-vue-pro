@@ -15,6 +15,11 @@ spring:
       max-file-size: 16MB # 单个文件大小
       max-request-size: 32MB # 设置总上传的文件大小
 
+  # MVC 配置项
+  mvc:
+    async:
+      request-timeout: 300s # SSE 流式对话（AI 场景）超时时间；Tomcat 默认 30s，填 -1 表示不超时
+
   # Jackson 配置项
   jackson:
     serialization:
@@ -287,6 +292,7 @@ yudao:
   security:
     permit-all_urls:
       - /admin-api/mp/open/** # 微信公众号开放平台，微信回调接口，不需要登录
+      - /admin-api/merchant/huifu/** # 汇付进件/业务开通回调，不需要登录
   api-encrypt:
     enable: false # 是否开启 API 加密。默认关闭，避免低版本 JDK 8（8u120 以下）启动时 bcprov 的 JCE 认证报错
     algorithm: AES # 加密算法，支持 AES、RSA 等
@@ -365,5 +371,19 @@ yudao:
   iot:
     message-bus:
       type: redis # 消息总线的类型
+  # 商户域（多商户商城一期）：以下为空值，联调前填入汇付沙箱/生产配置
+  merchant:
+    huifu:
+      sys-id: '' # 渠道商/平台 huifu_id（公共参数 sys_id）
+      product-id: '' # 汇付产品号（公共参数 product_id）
+      private-key: '' # 平台私钥（Base64，PKCS8），用于请求加签
+      huifu-public-key: '' # 汇付公钥（Base64，X509），用于响应/回调验签
+      gateway-url: https://api.huifu.com # 网关地址
+      kyc-callback-url: '' # 进件审核结果回调（KYC async_return_url）。后台「配置管理」key=merchant.huifu.kyc-callback-url 优先，此处为兜底
+      busi-callback-url: '' # 业务开通结果回调（busi_async_return_url）。后台「配置管理」key=merchant.huifu.busi-callback-url 优先，此处为兜底
+      wx-conf-list: '' # 微信配置对象 JSON 串（wx_conf_list，含费率）
+      ali-conf-list: '' # 支付宝配置对象 JSON 串（ali_conf_list，含费率）
+      online-busi-type: '' # 线上业务类型编码（scene_type 含线上时必填）
+      online-media-info-list: '' # 运营媒介材料 JSON 串（online_media_info_list）
 
 debug: false

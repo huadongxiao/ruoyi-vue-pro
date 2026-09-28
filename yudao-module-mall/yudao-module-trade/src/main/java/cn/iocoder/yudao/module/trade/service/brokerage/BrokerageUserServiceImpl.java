@@ -352,35 +352,46 @@ public class BrokerageUserServiceImpl implements BrokerageUserService {
      * 根据绑定用户编号，获得下级用户编号列表
      *
      * @param bindUserId 绑定用户编号
-     * @param level      下级用户的层级。
-     *                   如果 level 为空，则查询 1+2 两个层级
+     * @param level      下级用户的层级。为空时查询全部层级
      * @return 下级用户编号列表
      */
     private List<Long> getChildUserIdsByLevel(Long bindUserId, Integer level) {
         if (bindUserId == null) {
             return Collections.emptyList();
         }
-        // 先查第 1 级
-        List<Long> bindUserIds = brokerageUserMapper.selectIdListByBindUserIdIn(Collections.singleton(bindUserId));
-        if (CollUtil.isEmpty(bindUserIds)) {
+        // 1. 层级数未配置时，直接返回空。
+        //    注意：不能抛错，否则会影响 /get-summary 等「写死查第 1/2 级」的既有调用方
+        int maxLevel = getBrokerageLevelCount();
+        if (maxLevel <= 0) {
             return Collections.emptyList();
         }
+        // 2. 校验层级不超过当前配置的层级数
+        if (level != null && (level < 1 || level > maxLevel)) {
+            throw exception(BROKERAGE_USER_LEVEL_NOT_SUPPORT, maxLevel);
+        }
+        // 3. 逐层向下
+        int walkLevel = level != null ? level : maxLevel;
+        List<Long> result = new ArrayList<>();
+        List<Long> current = Collections.singletonList(bindUserId);
+        for (int i = 1; i <= walkLevel; i++) {
+            List<Long> childIds = brokerageUserMapper.selectIdListByBindUserIdIn(current);
+            if (CollUtil.isEmpty(childIds)) {
+                break;
+            }
+            // level 为空时收集所有层级；否则只收集目标层级
+            if (level == null || i == level) {
+                result.addAll(childIds);
+            }
+            current = childIds;
+        }
+        return result;
+    }
 
-        // 情况一：level 为空，查询所有级别
-        if (level == null) {
-            // 再查第 2 级，并合并结果
-            bindUserIds.addAll(brokerageUserMapper.selectIdListByBindUserIdIn(bindUserIds));
-            return bindUserIds;
-        }
-        // 情况二：level 为 1，只查询第 1 级
-        if (level == 1) {
-            return bindUserIds;
-        }
-        // 情况三：level 为 1，只查询第 2 级
-        if (level == 2) {
-            return brokerageUserMapper.selectIdListByBindUserIdIn(bindUserIds);
-        }
-        throw exception(BROKERAGE_USER_LEVEL_NOT_SUPPORT);
+    @Override
+    public int getBrokerageLevelCount() {
+        TradeConfigDO tradeConfig = tradeConfigService.getTradeConfig();
+        return tradeConfig == null || CollUtil.isEmpty(tradeConfig.getBrokerageLevels())
+                ? 0 : tradeConfig.getBrokerageLevels().size();
     }
 
 }

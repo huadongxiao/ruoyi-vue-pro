@@ -25,4 +25,7 @@ public class AppBrokerageUserMySummaryRespVO {
     @Schema(description = "分销用户数量（二级）", requiredMode = Schema.RequiredMode.REQUIRED, example = "10")
     private Long secondBrokerageUserCount;
 
+    @Schema(description = "分销层级数（全局配置），用于会员端渲染层级 tab", requiredMode = Schema.RequiredMode.REQUIRED, example = "3")
+    private Integer brokerageLevelCount;
+
 }

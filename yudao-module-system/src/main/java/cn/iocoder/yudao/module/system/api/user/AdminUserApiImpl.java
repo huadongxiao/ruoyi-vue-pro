@@ -98,4 +98,9 @@ public class AdminUserApiImpl implements AdminUserApi {
         userService.validateUserList(ids);
     }
 
+    @Override
+    public void updateUserStatus(Long id, Integer status) {
+        userService.updateUserStatus(id, status);
+    }
+
 }

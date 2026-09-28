@@ -264,15 +264,14 @@ public interface TradeOrderConvert {
 
     default BrokerageAddReqBO convert(MemberUserRespDTO user, TradeOrderItemDO item,
                                       ProductSpuRespDTO spu, ProductSkuRespDTO sku) {
-        BrokerageAddReqBO bo = new BrokerageAddReqBO().setBizId(String.valueOf(item.getId())).setSourceUserId(item.getUserId())
+        // 商品独立分销时，使用 SKU 配置的层级规则（全量覆盖）；否则为 null，走全局配置
+        boolean subCommissionType = BooleanUtil.isTrue(spu.getSubCommissionType());
+        return new BrokerageAddReqBO().setBizId(String.valueOf(item.getId())).setSourceUserId(item.getUserId())
                 .setBasePrice(item.getPayPrice())
+                .setCount(item.getCount())
+                .setSubCommissionType(subCommissionType)
+                .setLevels(subCommissionType ? sku.getBrokerageLevels() : null)
                 .setTitle(StrUtil.format("{}成功购买{}", user.getNickname(), item.getSpuName()));
-        if (BooleanUtil.isTrue(spu.getSubCommissionType())) {
-            // 特殊：单独设置的佣金需要乘以购买数量。关联 https://gitee.com/yudaocode/yudao-mall-uniapp/issues/ICY7SJ
-            bo.setFirstFixedPrice(ObjectUtil.defaultIfNull(sku.getFirstBrokeragePrice(), 0) * item.getCount())
-                    .setSecondFixedPrice(ObjectUtil.defaultIfNull(sku.getSecondBrokeragePrice(), 0) * item.getCount());
-        }
-        return bo;
     }
 
     @Named("convertList04")

@@ -94,15 +94,30 @@ public class MemberUserServiceImpl implements MemberUserService {
         return createUser(null, nickname, avtar, registerIp, terminal);
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public MemberUserDO createUserByMobile(String mobile, String password, String registerIp, Integer terminal) {
+        // 校验手机号未被注册
+        if (memberUserMapper.selectByMobile(mobile) != null) {
+            throw exception(AUTH_MOBILE_USED);
+        }
+        return createUser(mobile, null, null, password, registerIp, terminal);
+    }
+
     private MemberUserDO createUser(String mobile, String nickname, String avtar,
                                     String registerIp, Integer terminal) {
         // 生成密码
         String password = IdUtil.fastSimpleUUID();
+        return createUser(mobile, nickname, avtar, password, registerIp, terminal);
+    }
+
+    private MemberUserDO createUser(String mobile, String nickname, String avtar, String rawPassword,
+                                    String registerIp, Integer terminal) {
         // 插入用户
         MemberUserDO user = new MemberUserDO();
         user.setMobile(mobile);
         user.setStatus(CommonStatusEnum.ENABLE.getStatus()); // 默认开启
-        user.setPassword(encodePassword(password)); // 加密密码
+        user.setPassword(encodePassword(rawPassword)); // 加密密码
         user.setRegisterIp(registerIp).setRegisterTerminal(terminal);
         user.setNickname(nickname).setAvatar(avtar); // 基础信息
         if (StrUtil.isEmpty(nickname)) {

@@ -161,7 +161,7 @@ CREATE TABLE IF NOT EXISTS "trade_brokerage_user"
     "bind_user_time"    varchar,
     "brokerage_enabled" bit      NOT NULL,
     "brokerage_time"    varchar,
-    "price"             int      NOT NULL,
+    "brokerage_price"   int      NOT NULL,
     "frozen_price"      int      NOT NULL,
     "creator"           varchar           DEFAULT '',
     "create_time"       datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,

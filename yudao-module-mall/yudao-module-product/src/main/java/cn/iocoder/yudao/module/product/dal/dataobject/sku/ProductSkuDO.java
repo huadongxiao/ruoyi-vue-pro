@@ -3,6 +3,7 @@ package cn.iocoder.yudao.module.product.dal.dataobject.sku;
 import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
 import cn.iocoder.yudao.module.product.dal.dataobject.property.ProductPropertyDO;
 import cn.iocoder.yudao.module.product.dal.dataobject.property.ProductPropertyValueDO;
+import cn.iocoder.yudao.module.product.api.sku.dto.BrokerageLevelRule;
 import cn.iocoder.yudao.module.product.dal.dataobject.spu.ProductSpuDO;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableField;
@@ -78,13 +79,9 @@ public class ProductSkuDO extends BaseDO {
     private Double volume;
 
     /**
-     * 一级分销的佣金，单位：分
+     * 分销层级规则。商品独立分销时全量覆盖全局配置，数组长度必须与全局层级数一致
      */
-    private Integer firstBrokeragePrice;
-    /**
-     * 二级分销的佣金，单位：分
-     */
-    private Integer secondBrokeragePrice;
+    private List<BrokerageLevelRule> brokerageLevels;
 
     // ========== 营销相关字段 =========
 

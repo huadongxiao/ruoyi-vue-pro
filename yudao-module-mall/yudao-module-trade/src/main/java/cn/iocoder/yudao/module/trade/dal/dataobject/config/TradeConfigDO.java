@@ -2,6 +2,7 @@ package cn.iocoder.yudao.module.trade.dal.dataobject.config;
 
 import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
 import cn.iocoder.yudao.framework.mybatis.core.type.IntegerListTypeHandler;
+import cn.iocoder.yudao.module.product.api.sku.dto.BrokerageLevelRule;
 import cn.iocoder.yudao.module.trade.enums.brokerage.BrokerageBindModeEnum;
 import cn.iocoder.yudao.module.trade.enums.brokerage.BrokerageEnabledConditionEnum;
 import cn.iocoder.yudao.module.trade.enums.brokerage.BrokerageWithdrawTypeEnum;
@@ -88,13 +89,10 @@ public class TradeConfigDO extends BaseDO {
     @TableField(typeHandler = JacksonTypeHandler.class)
     private List<String> brokeragePosterUrls;
     /**
-     * 一级返佣比例
+     * 分销层级规则。数组长度即层级数，顺序即层级顺序
      */
-    private Integer brokerageFirstPercent;
-    /**
-     * 二级返佣比例
-     */
-    private Integer brokerageSecondPercent;
+    @TableField(typeHandler = JacksonTypeHandler.class)
+    private List<BrokerageLevelRule> brokerageLevels;
     /**
      * 用户提现最低金额
      */

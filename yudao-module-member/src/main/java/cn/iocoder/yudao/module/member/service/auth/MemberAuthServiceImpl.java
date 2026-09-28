@@ -77,6 +77,17 @@ public class MemberAuthServiceImpl implements MemberAuthService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
+    public AppAuthLoginRespVO register(AppAuthRegisterReqVO reqVO) {
+        // 创建用户，手机号已注册时会抛出 AUTH_MOBILE_USED
+        MemberUserDO user = userService.createUserByMobile(reqVO.getMobile(), reqVO.getPassword(),
+                getClientIP(), getTerminal());
+
+        // 创建 Token 令牌，记录登录日志
+        return createTokenAfterLoginSuccess(user, reqVO.getMobile(), LoginLogTypeEnum.LOGIN_MOBILE, null);
+    }
+
+    @Override
     @Transactional
     public AppAuthLoginRespVO smsLogin(AppAuthSmsLoginReqVO reqVO) {
         // 校验验证码

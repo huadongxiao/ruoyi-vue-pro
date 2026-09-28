@@ -8,6 +8,7 @@ import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.number.MoneyUtils;
 import cn.iocoder.yudao.framework.mybatis.core.util.MyBatisUtils;
 import cn.iocoder.yudao.module.product.api.sku.ProductSkuApi;
+import cn.iocoder.yudao.module.product.api.sku.dto.BrokerageLevelRule;
 import cn.iocoder.yudao.module.product.api.sku.dto.ProductSkuRespDTO;
 import cn.iocoder.yudao.module.product.api.spu.ProductSpuApi;
 import cn.iocoder.yudao.module.product.api.spu.dto.ProductSpuRespDTO;
@@ -32,6 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
 import javax.annotation.Resource;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -75,33 +77,30 @@ public class BrokerageRecordServiceImpl implements BrokerageRecordService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void addBrokerage(Long userId, BrokerageRecordBizTypeEnum bizType, List<BrokerageAddReqBO> list) {
-        TradeConfigDO memberConfig = tradeConfigService.getTradeConfig();
+        TradeConfigDO tradeConfig = tradeConfigService.getTradeConfig();
         // 0 未启用分销功能
-        if (memberConfig == null || !BooleanUtil.isTrue(memberConfig.getBrokerageEnabled())) {
+        if (tradeConfig == null || !BooleanUtil.isTrue(tradeConfig.getBrokerageEnabled())) {
             log.error("[addBrokerage][增加佣金失败：brokerageEnabled 未配置，userId({}) bizType({}) list({})", userId, bizType, list);
             return;
         }
+        // 0.1 校验层级规则已配置
+        List<BrokerageLevelRule> globalRules = tradeConfig.getBrokerageLevels();
+        if (CollUtil.isEmpty(globalRules)) {
+            log.error("[addBrokerage][增加佣金失败：brokerageLevels 未配置，userId({}) bizType({})", userId, bizType);
+            return;
+        }
 
-        // 1.1 获得一级推广人
-        BrokerageUserDO firstUser = brokerageUserService.getBindBrokerageUser(userId);
-        if (firstUser == null || !BooleanUtil.isTrue(firstUser.getBrokerageEnabled())) {
-            return;
+        // 逐级向上分佣。注意：上级无分销资格时跳过该人，但层号不压缩
+        BrokerageUserDO upline = brokerageUserService.getBindBrokerageUser(userId);
+        for (int level = 1; upline != null && level <= globalRules.size(); level++) {
+            if (BooleanUtil.isTrue(upline.getBrokerageEnabled())) {
+                addBrokerage(upline, list, tradeConfig.getBrokerageFrozenDays(), globalRules, bizType, level);
+            }
+            // 继续往上找一级
+            upline = upline.getBindUserId() != null
+                    ? brokerageUserService.getBrokerageUser(upline.getBindUserId())
+                    : null;
         }
-        // 1.2 计算一级分佣
-        addBrokerage(firstUser, list, memberConfig.getBrokerageFrozenDays(), memberConfig.getBrokerageFirstPercent(),
-                bizType, 1);
-
-        // 2.1 获得二级推广员
-        if (firstUser.getBindUserId() == null) {
-            return;
-        }
-        BrokerageUserDO secondUser = brokerageUserService.getBrokerageUser(firstUser.getBindUserId());
-        if (secondUser == null || !BooleanUtil.isTrue(secondUser.getBrokerageEnabled())) {
-            return;
-        }
-        // 2.2 计算二级分佣
-        addBrokerage(secondUser, list, memberConfig.getBrokerageFrozenDays(), memberConfig.getBrokerageSecondPercent(),
-                bizType, 2);
     }
 
     @Override
@@ -132,37 +131,39 @@ public class BrokerageRecordServiceImpl implements BrokerageRecordService {
     }
 
     /**
-     * 计算佣金
+     * 计算佣金 = 比例部分 + 固定部分
      *
-     * @param basePrice  佣金基数
-     * @param percent    佣金比例
-     * @param fixedPrice 固定佣金
+     * @param basePrice  佣金基数，单位：分
+     * @param percent    返佣比例，百分比数值。例如 10 表示 10%
+     * @param fixedPrice 固定佣金，单位：分（单件）
+     * @param count      购买数量
      * @return 佣金
      */
-    int calculatePrice(Integer basePrice, Integer percent, Integer fixedPrice) {
-        // 1. 优先使用固定佣金
-        if (fixedPrice != null && fixedPrice >= 0) {
-            return fixedPrice;
+    int calculatePrice(Integer basePrice, BigDecimal percent, Integer fixedPrice, Integer count) {
+        // 1. 比例部分：基数与比例都为正时才计算，否则记 0（沿用旧实现的守卫语义，避免 NPE）
+        int percentPart = 0;
+        if (basePrice != null && basePrice > 0 && percent != null && percent.compareTo(BigDecimal.ZERO) > 0) {
+            percentPart = MoneyUtils.calculateRatePriceFloor(basePrice, percent.doubleValue());
         }
-        // 2. 根据比例计算佣金
-        if (basePrice != null && basePrice > 0 && percent != null && percent > 0) {
-            return MoneyUtils.calculateRatePriceFloor(basePrice, Double.valueOf(percent));
-        }
-        return 0;
+        // 2. 固定部分：单件固定佣金 × 购买数量
+        int fixedPart = (fixedPrice != null ? fixedPrice : 0) * (count != null ? count : 1);
+        // 3. 相加
+        return percentPart + fixedPart;
     }
 
     /**
-     * 增加用户佣金
+     * 增加某一级用户的佣金
      *
      * @param user                用户
      * @param list                佣金增加参数列表
      * @param brokerageFrozenDays 冻结天数
-     * @param brokeragePercent    佣金比例
+     * @param globalRules         全局层级规则
      * @param bizType             业务类型
-     * @param sourceUserLevel     来源用户等级
+     * @param sourceUserLevel     来源用户等级，从 1 开始
      */
     private void addBrokerage(BrokerageUserDO user, List<BrokerageAddReqBO> list, Integer brokerageFrozenDays,
-                              Integer brokeragePercent, BrokerageRecordBizTypeEnum bizType, Integer sourceUserLevel) {
+                              List<BrokerageLevelRule> globalRules, BrokerageRecordBizTypeEnum bizType,
+                              Integer sourceUserLevel) {
         // 1.1 处理冻结时间
         LocalDateTime unfreezeTime = null;
         if (brokerageFrozenDays != null && brokerageFrozenDays > 0) {
@@ -172,16 +173,16 @@ public class BrokerageRecordServiceImpl implements BrokerageRecordService {
         int totalBrokerage = 0;
         List<BrokerageRecordDO> records = new ArrayList<>();
         for (BrokerageAddReqBO item : list) {
-            // 计算金额
-            Integer fixedPrice;
-            if (Objects.equals(sourceUserLevel, 1)) {
-                fixedPrice = item.getFirstFixedPrice();
-            } else if (Objects.equals(sourceUserLevel, 2)) {
-                fixedPrice = item.getSecondFixedPrice();
-            } else {
-                throw new IllegalArgumentException(StrUtil.format("用户等级({}) 不合法", sourceUserLevel));
+            // 规则来源以 subCommissionType 为准：
+            // 商品独立分销用商品配置（为空表示该商品未配佣金，记 0，不能回落到全局）；否则用全局配置
+            List<BrokerageLevelRule> rules = BooleanUtil.isTrue(item.getSubCommissionType())
+                    ? item.getLevels() : globalRules;
+            if (CollUtil.isEmpty(rules) || sourceUserLevel > rules.size()) {
+                continue;
             }
-            int brokeragePrice = calculatePrice(item.getBasePrice(), brokeragePercent, fixedPrice);
+            BrokerageLevelRule rule = rules.get(sourceUserLevel - 1);
+            int brokeragePrice = calculatePrice(item.getBasePrice(), rule.getPercent(), rule.getFixedPrice(),
+                    item.getCount());
             if (brokeragePrice <= 0) {
                 continue;
             }
@@ -340,23 +341,37 @@ public class BrokerageRecordServiceImpl implements BrokerageRecordService {
 
         // 3.1 获取商品 SKU 列表
         List<ProductSkuRespDTO> skuList = productSkuApi.getSkuListBySpuId(ListUtil.of(spuId));
+        // 3.2 取一级规则（浏览者作为直属上级，拿到的是第 1 级佣金）
+        BrokerageLevelRule firstRule = CollUtil.getFirst(tradeConfig.getBrokerageLevels());
+        if (firstRule == null) {
+            return respVO;
+        }
         if (BooleanUtil.isTrue(spu.getSubCommissionType())) {
-            // 3.2.1 商品独立分销模式：直接取 SKU 固定佣金
-            // 注意：固定佣金允许为 0，表示商家主动设为零佣金；为空时，也按 0 处理
+            // 3.3.1 商品独立分销：取 SKU 第 1 级的固定佣金
             Integer fixedMinPrice = getMinValue(skuList,
-                    sku -> ObjectUtil.defaultIfNull(sku.getFirstBrokeragePrice(), 0));
+                    sku -> getLevelFixedPrice(sku.getBrokerageLevels(), 1));
             Integer fixedMaxPrice = getMaxValue(skuList,
-                    sku -> ObjectUtil.defaultIfNull(sku.getFirstBrokeragePrice(), 0));
-            respVO.setBrokerageMinPrice(calculatePrice(null, tradeConfig.getBrokerageFirstPercent(), fixedMinPrice))
-                    .setBrokerageMaxPrice(calculatePrice(null, tradeConfig.getBrokerageFirstPercent(), fixedMaxPrice));
+                    sku -> getLevelFixedPrice(sku.getBrokerageLevels(), 1));
+            respVO.setBrokerageMinPrice(calculatePrice(null, null, fixedMinPrice, 1))
+                    .setBrokerageMaxPrice(calculatePrice(null, null, fixedMaxPrice, 1));
         } else {
-            // 3.2.2 全局比例模式：固定佣金传 null，避免被默认值 0 提前拦截
+            // 3.3.2 全局比例模式
             Integer spuMinPrice = getMinValue(skuList, ProductSkuRespDTO::getPrice);
             Integer spuMaxPrice = getMaxValue(skuList, ProductSkuRespDTO::getPrice);
-            respVO.setBrokerageMinPrice(calculatePrice(spuMinPrice, tradeConfig.getBrokerageFirstPercent(), null))
-                    .setBrokerageMaxPrice(calculatePrice(spuMaxPrice, tradeConfig.getBrokerageFirstPercent(), null));
+            respVO.setBrokerageMinPrice(calculatePrice(spuMinPrice, firstRule.getPercent(), 0, 1))
+                    .setBrokerageMaxPrice(calculatePrice(spuMaxPrice, firstRule.getPercent(), 0, 1));
         }
         return respVO;
+    }
+
+    /**
+     * 取指定层级的固定佣金，缺失时按 0 处理
+     */
+    private static Integer getLevelFixedPrice(List<BrokerageLevelRule> rules, int level) {
+        if (CollUtil.isEmpty(rules) || rules.size() < level) {
+            return 0;
+        }
+        return ObjectUtil.defaultIfNull(rules.get(level - 1).getFixedPrice(), 0);
     }
 
     /**

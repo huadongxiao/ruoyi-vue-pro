@@ -1,6 +1,7 @@
 package cn.iocoder.yudao.module.trade.controller.admin.config.vo;
 
 import cn.iocoder.yudao.framework.common.validation.InEnum;
+import cn.iocoder.yudao.module.product.api.sku.dto.BrokerageLevelRule;
 import cn.iocoder.yudao.module.trade.enums.brokerage.BrokerageBindModeEnum;
 import cn.iocoder.yudao.module.trade.enums.brokerage.BrokerageEnabledConditionEnum;
 import cn.iocoder.yudao.module.trade.enums.brokerage.BrokerageWithdrawTypeEnum;
@@ -67,15 +68,8 @@ public class TradeConfigBaseVO {
     @Schema(description = "分销海报图地址数组", requiredMode = Schema.RequiredMode.REQUIRED, example = "[https://www.iocoder.cn/yudao.jpg]")
     private List<String> brokeragePosterUrls;
 
-    @Schema(description = "一级返佣比例", requiredMode = Schema.RequiredMode.REQUIRED, example = "5")
-    @NotNull(message = "一级返佣比例不能为空")
-    @Range(min = 0, max = 100, message = "一级返佣比例必须在 0 - 100 之间")
-    private Integer brokerageFirstPercent;
-
-    @Schema(description = "二级返佣比例", requiredMode = Schema.RequiredMode.REQUIRED, example = "5")
-    @NotNull(message = "二级返佣比例不能为空")
-    @Range(min = 0, max = 100, message = "二级返佣比例必须在 0 - 100 之间")
-    private Integer brokerageSecondPercent;
+    @Schema(description = "分销层级规则")
+    private List<BrokerageLevelRule> brokerageLevels;
 
     @Schema(description = "用户提现最低金额", requiredMode = Schema.RequiredMode.REQUIRED, example = "1000")
     @NotNull(message = "用户提现最低金额不能为空")

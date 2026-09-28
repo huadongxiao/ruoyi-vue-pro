@@ -87,13 +87,19 @@ public class AppBrokerageUserController {
         Integer withdrawPrice = brokerageWithdrawService.getWithdrawSummaryListByUserId(Collections.singleton(userId),
                         asList(BrokerageWithdrawStatusEnum.AUDIT_SUCCESS, BrokerageWithdrawStatusEnum.WITHDRAW_SUCCESS)).stream()
                 .findFirst().map(BrokerageWithdrawSummaryRespBO::getPrice).orElse(0);
-        // 统计分销用户数量（一级）
-        Long firstBrokerageUserCount = brokerageUserService.getBrokerageUserCountByBindUserId(userId, 1);
+        // 统计分销层级数（全局配置）
+        int levelCount = brokerageUserService.getBrokerageLevelCount();
+        // 统计分销用户数量（一级）。
+        // 注意：层级数可能未配置或小于 2，必须按实际层级数决定是否查询，否则会超出配置报错
+        Long firstBrokerageUserCount = levelCount >= 1
+                ? brokerageUserService.getBrokerageUserCountByBindUserId(userId, 1) : 0L;
         // 统计分销用户数量（二级）
-        Long secondBrokerageUserCount = brokerageUserService.getBrokerageUserCountByBindUserId(userId, 2);
+        Long secondBrokerageUserCount = levelCount >= 2
+                ? brokerageUserService.getBrokerageUserCountByBindUserId(userId, 2) : 0L;
 
         // 拼接返回
-        return success(BrokerageUserConvert.INSTANCE.convert(yesterdayPrice, withdrawPrice, firstBrokerageUserCount, secondBrokerageUserCount, brokerageUser));
+        return success(BrokerageUserConvert.INSTANCE.convert(yesterdayPrice, withdrawPrice,
+                firstBrokerageUserCount, secondBrokerageUserCount, levelCount, brokerageUser));
     }
 
     @GetMapping("/rank-page-by-user-count")

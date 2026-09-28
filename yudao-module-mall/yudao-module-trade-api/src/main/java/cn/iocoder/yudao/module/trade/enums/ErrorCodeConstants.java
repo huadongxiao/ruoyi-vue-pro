@@ -101,7 +101,9 @@ public interface ErrorCodeConstants {
     ErrorCode BROKERAGE_BIND_MODE_REGISTER = new ErrorCode(1_011_007_005, "只有在注册时可以绑定");
     ErrorCode BROKERAGE_BIND_OVERRIDE = new ErrorCode(1_011_007_006, "已绑定了推广人");
     ErrorCode BROKERAGE_BIND_LOOP = new ErrorCode(1_011_007_007, "下级不能绑定自己的上级");
-    ErrorCode BROKERAGE_USER_LEVEL_NOT_SUPPORT = new ErrorCode(1_011_007_008, "目前只支持 level 小于等于 2");
+    ErrorCode BROKERAGE_USER_LEVEL_NOT_SUPPORT = new ErrorCode(1_011_007_008, "分销层级必须在 1 到 {} 之间");
+    ErrorCode BROKERAGE_LEVEL_CONFIG_INVALID = new ErrorCode(1_011_007_010, "分销层级配置不合法，层级需从 1 连续递增，比例 0-100，固定佣金不小于 0，且不超过 {} 级");
+    ErrorCode BROKERAGE_PRODUCT_LEVEL_MISMATCH = new ErrorCode(1_011_007_011, "商品独立分销的层级数必须与全局一致，当前应为 {} 级");
     ErrorCode BROKERAGE_CREATE_USER_EXISTS = new ErrorCode(1_011_007_009, "分销用户已存在");
 
     // ========== 分销提现 模块 1-011-008-000 ==========

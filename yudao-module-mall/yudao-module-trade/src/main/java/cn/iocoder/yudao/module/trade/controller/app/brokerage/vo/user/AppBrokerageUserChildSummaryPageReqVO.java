@@ -4,8 +4,7 @@ import cn.iocoder.yudao.framework.common.pojo.PageParam;
 import cn.iocoder.yudao.framework.common.pojo.SortingField;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
-import org.hibernate.validator.constraints.Range;
-
+import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 
 @Schema(description = "用户 App - 下级分销统计分页 Request VO")
@@ -24,7 +23,7 @@ public class AppBrokerageUserChildSummaryPageReqVO extends PageParam {
 
     @Schema(description = "下级的级别", requiredMode = Schema.RequiredMode.REQUIRED, example = "1") // 1 - 直接下级；2 - 间接下级
     @NotNull(message = "下级的级别不能为空")
-    @Range(min = 1, max = 2, message = "下级的级别只能是 {min} 或者 {max}")
+    @Min(value = 1, message = "下级的级别最小为 {value}")
     private Integer level;
 
 }

@@ -59,6 +59,21 @@ public interface MemberUserService {
     MemberUserDO createUser(String nickname, String avtar, String registerIp, Integer terminal);
 
     /**
+     * 【会员】基于手机号 + 密码，注册用户
+     * <p>
+     * 手机号已注册时，抛出 {@link cn.iocoder.yudao.module.member.enums.ErrorCodeConstants#AUTH_MOBILE_USED}
+     * <p>
+     * 注意：当前未对接短信，因此不校验手机号的归属
+     *
+     * @param mobile     手机号
+     * @param password   未加密的密码
+     * @param registerIp 注册 IP
+     * @param terminal   终端 {@link TerminalEnum}
+     * @return 用户对象
+     */
+    MemberUserDO createUserByMobile(String mobile, String password, String registerIp, Integer terminal);
+
+    /**
      * 更新用户的最后登陆信息
      *
      * @param id      用户编号

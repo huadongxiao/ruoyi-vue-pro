@@ -1,0 +1,121 @@
+### 登录（先用 admin 换 token，入驻商户用自己的账号）
+POST {{baseUrl}}/system/auth/login
+Content-Type: application/json
+tenant-id: {{adminTenantId}}
+
+{
+  "username": "admin",
+  "password": "admin123"
+}
+
+### 初始化我的商户（注册后调用，幂等；用商户自己的 token）
+POST {{baseUrl}}/merchant/merchant/init
+Authorization: Bearer {{token}}
+tenant-id: {{adminTenantId}}
+
+### 获得我的商户
+GET {{baseUrl}}/merchant/merchant/my
+Authorization: Bearer {{token}}
+tenant-id: {{adminTenantId}}
+
+### 上传进件图片（返回 data 即文件 id，用于下面 submit 的 *PicId 字段）
+POST {{baseUrl}}/infra/file/upload
+Authorization: Bearer {{token}}
+tenant-id: {{adminTenantId}}
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="license.jpg"
+Content-Type: image/jpeg
+
+< ./license.jpg
+--WebAppBoundary--
+
+### 提交进件申请（图片 id 换成 /infra/file/upload 返回的 data）
+POST {{baseUrl}}/merchant/apply/submit
+Authorization: Bearer {{token}}
+tenant-id: {{adminTenantId}}
+Content-Type: application/json
+
+{
+  "regName": "李四个体工商户",
+  "shortName": "李四小铺",
+  "receiptName": "李四小铺",
+  "entType": "1",
+  "busiType": "200001",
+  "mcc": "5812",
+  "sceneType": "1",
+  "licenseCode": "92330106MA27XW9L8F",
+  "licenseValidityType": "1",
+  "licenseBeginDate": "2020-01-01",
+  "licenseEndDate": "2040-01-01",
+  "foundDate": "2020-01-01",
+  "regDistrictId": "310104",
+  "regDetail": "徐汇区宜山路 425 号",
+  "districtId": "310104",
+  "detailAddr": "徐汇区宜山路 425 号 3 楼",
+  "legalName": "李四",
+  "legalCertType": "1",
+  "legalCertNo": "310104199001011234",
+  "legalCertValidityType": "1",
+  "legalCertBeginDate": "2010-01-01",
+  "legalCertEndDate": "2030-01-01",
+  "legalAddr": "上海市徐汇区",
+  "contactName": "李四",
+  "contactMobileNo": "13800000000",
+  "contactEmail": "lisi@example.com",
+  "loginName": "13800000000",
+  "cardBranchCode": "308290003012",
+  "cardNo": "6222020200112233445",
+  "cardName": "李四",
+  "cardType": "1",
+  "licensePicId": 1,
+  "legalCertFrontId": 2,
+  "legalCertBackId": 3,
+  "regAcctId": 4,
+  "settleCardFrontId": 5,
+  "settleCertFrontId": 6,
+  "settleCertBackId": 7,
+  "authEntrustId": 8
+}
+
+### 获得我的进件申请列表
+GET {{baseUrl}}/merchant/apply/my-list
+Authorization: Bearer {{token}}
+tenant-id: {{adminTenantId}}
+
+### 获得商户分页（运营用）
+GET {{baseUrl}}/merchant/merchant/page?pageNo=1&pageSize=10
+Authorization: Bearer {{token}}
+tenant-id: {{adminTenantId}}
+
+### 停用/启用商户（status：2 生效 / 4 停用；运营用）
+PUT {{baseUrl}}/merchant/merchant/update-status?id=1&status=4
+Authorization: Bearer {{token}}
+tenant-id: {{adminTenantId}}
+
+### 汇付 KYC 进件审核结果回调（汇付服务器调用，模拟报文见 docs/huifu，需用平台私钥重签）
+POST {{baseUrl}}/merchant/huifu/kyc-callback
+Content-Type: application/json
+
+{
+  "resp_code": "00000000",
+  "resp_desc": "成功",
+  "req_seq_id": "M202609281200000001ABCD",
+  "apply_status": "Y",
+  "apply_reason": "审核通过",
+  "huifu_id": "6666000000000001",
+  "sign": "replace-with-correct-sign"
+}
+
+### 汇付业务开通结果回调（汇付服务器调用，模拟报文需重签）
+POST {{baseUrl}}/merchant/huifu/busi-callback
+Content-Type: application/json
+
+{
+  "resp_code": "00000000",
+  "resp_desc": "成功",
+  "ord_id": "2026092812000001",
+  "huifu_id": "6666000000000001",
+  "sign": "replace-with-correct-sign"
+}

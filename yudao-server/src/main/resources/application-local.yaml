@@ -74,11 +74,12 @@ spring:
           password: 123456
         tdengine: # IoT 时序数据库
           lazy: true # 开启懒加载，保证启动速度
-          url: jdbc:TAOS-WS://${TDENGINE_HOST:117.88.101.77}:${TDENGINE_PORT:6041}/${TDENGINE_DATABASE:ruoyi_vue_pro}?varcharAsString=true&enableAutoReconnect=true
+          url: jdbc:TAOS-WS://${TDENGINE_HOST:127.0.0.1}:${TDENGINE_PORT:6041}/${TDENGINE_DATABASE:ruoyi_vue_pro}?varcharAsString=true&enableAutoReconnect=true
           driver-class-name: com.taosdata.jdbc.ws.WebSocketDriver
           username: ${TDENGINE_USERNAME:root}
-          password: ${TDENGINE_PASSWORD}
+          password: ${TDENGINE_PASSWORD:taosdata}
           druid:
+            init-timeout-millis: 3000 # 连接超时，避免远程演示库不可达拖慢启动
             validation-query: SELECT SERVER_STATUS() # TDengine 数据源的有效性检查 SQL
 
   # Redis 配置。Redisson 默认的配置足够使用，一般不需要进行调优

@@ -39,4 +39,9 @@ public class PermissionApiImpl implements PermissionApi {
         return permissionService.getDeptDataPermission(userId);
     }
 
+    @Override
+    public void assignUserRole(Long userId, Set<Long> roleIds) {
+        permissionService.assignUserRole(userId, roleIds);
+    }
+
 }

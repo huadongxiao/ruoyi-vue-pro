@@ -102,6 +102,13 @@ public interface BrokerageUserService {
     Long getBrokerageUserCountByBindUserId(Long bindUserId, Integer level);
 
     /**
+     * 获得当前全局配置的分销层级数
+     *
+     * @return 层级数；未配置时返回 0
+     */
+    int getBrokerageLevelCount();
+
+    /**
      * 【会员】绑定推广员
      *
      * @param userId     用户编号

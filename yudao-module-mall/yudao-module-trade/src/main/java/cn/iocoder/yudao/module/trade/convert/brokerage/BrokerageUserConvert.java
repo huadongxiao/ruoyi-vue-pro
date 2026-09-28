@@ -77,13 +77,14 @@ public interface BrokerageUserConvert {
 
     default AppBrokerageUserMySummaryRespVO convert(Integer yesterdayPrice, Integer withdrawPrice,
                                                     Long firstBrokerageUserCount, Long secondBrokerageUserCount,
-                                                    BrokerageUserDO brokerageUser) {
+                                                    Integer brokerageLevelCount, BrokerageUserDO brokerageUser) {
         AppBrokerageUserMySummaryRespVO respVO = new AppBrokerageUserMySummaryRespVO()
                 .setYesterdayPrice(ObjUtil.defaultIfNull(yesterdayPrice, 0))
                 .setWithdrawPrice(ObjUtil.defaultIfNull(withdrawPrice, 0))
                 .setBrokeragePrice(0).setFrozenPrice(0)
                 .setFirstBrokerageUserCount(ObjUtil.defaultIfNull(firstBrokerageUserCount, 0L))
-                .setSecondBrokerageUserCount(ObjUtil.defaultIfNull(secondBrokerageUserCount, 0L));
+                .setSecondBrokerageUserCount(ObjUtil.defaultIfNull(secondBrokerageUserCount, 0L))
+                .setBrokerageLevelCount(ObjUtil.defaultIfNull(brokerageLevelCount, 0));
         // 设置 brokeragePrice、frozenPrice 字段
         Optional.ofNullable(brokerageUser)
                 .ifPresent(user -> respVO.setBrokeragePrice(user.getBrokeragePrice()).setFrozenPrice(user.getFrozenPrice()));
